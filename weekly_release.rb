@@ -18,7 +18,7 @@ DONE    = '10567372'
 RELEASE = '10567392'
 
 def log filename, message
-  File.write (File.join ENV['TODO_PATH'], 'log', filename), message
+  File.write (File.join ENV['TODO_PATH'], 'log', filename), "#{message}\n", mode: 'a'
 end
 
 def done_cards
@@ -29,15 +29,22 @@ end
 
 # Collect the "Done" cards' notes
 def release_title
-  done_cards.map { |card| '- ' + card['note'] }.join "\n"
+  if done_cards.empty?
+    Time.now.strftime "%-m/%d: Nada. 😢"
+  else
+    ([Time.now.strftime("%-m/%d:")] + done_cards.map { |card| '- ' + card['note'] }).join "\n"
+  end
 end
 
 # Create new "Release" card using release_title
 def create_release_card
+  # build post object
   url = 'https://api.github.com/projects/columns/%s/cards' % RELEASE
   uri = URI url
   post = Net::HTTP::Post.new uri, HEADERS
   post.body = { 'note' => release_title }.to_json
+
+  # create connection and send post
   http = Net::HTTP.new uri.host, uri.port
   http.use_ssl = 'https' == uri.scheme
   response = http.request post
@@ -61,11 +68,13 @@ end
 # Archive the "Done" cards
 def archive_done_cards
   done_cards.each do |card|
-    card_id = card['id']
-    url = 'https://api.github.com/projects/columns/cards/%s' % card_id
+    # build patch object
+    url = 'https://api.github.com/projects/columns/cards/%s' % card['id']
     uri = URI url
     patch = Net::HTTP::Patch.new uri, HEADERS
     patch.body = { 'archived' => true }.to_json
+
+    # create connection and send patch
     http = Net::HTTP.new uri.host, uri.port
     http.use_ssl = 'https' == uri.scheme
     response = http.request patch
