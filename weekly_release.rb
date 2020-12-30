@@ -28,21 +28,23 @@ def done_cards
 end
 
 # Collect the "Done" cards' notes
-def release_title
+def release_summary title = nil
+  datestamp_title = title ? Time.now.strftime("(%-m/%d) #{title}:") : Time.now.strftime("%-m/%d:")
+
   if done_cards.empty?
-    Time.now.strftime "%-m/%d: Nada. 😢"
+    datestamp_title + " Nada. 😢"
   else
-    ([Time.now.strftime("%-m/%d:")] + done_cards.map { |card| '- ' + card['note'] }).join "\n"
+    ([datestamp_title] + done_cards.map { |card| '- ' + card['note'] }).join "\n"
   end
 end
 
-# Create new "Release" card using release_title
-def create_release_card
+# Create new "Release" card
+def create_release_card summary
   # build post object
   url = 'https://api.github.com/projects/columns/%s/cards' % RELEASE
   uri = URI url
   post = Net::HTTP::Post.new uri, HEADERS
-  post.body = { 'note' => release_title }.to_json
+  post.body = { 'note' => summary }.to_json
 
   # create connection and send post
   http = Net::HTTP.new uri.host, uri.port
@@ -82,9 +84,10 @@ def archive_done_cards
   end
 end
 
-def release
-  create_release_card
-  send_text_with release_title
+def release title = nil
+  summary = release_summary title
+  create_release_card summary
+  send_text_with summary
   archive_done_cards
 rescue Exception => e
   log 'error.log', e.exception.inspect
@@ -92,4 +95,4 @@ rescue Exception => e
 end
 
 
-release
+release ARGV[0]
