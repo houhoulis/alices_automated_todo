@@ -59,7 +59,7 @@ def send_text_with message
     client.messages.create(
       to: MY_PHONE,
       from: TWILIO_PHONE,
-      body: "💪🏼Weekly Release! 🎉\n\n" + message
+      body: "🎉 Weekly Release! 🎊\n\n" + message
     )
   rescue StandardError => e
     log 'twilio.log', e.exception.inspect
